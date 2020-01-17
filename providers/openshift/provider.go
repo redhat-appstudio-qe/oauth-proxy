@@ -187,7 +187,7 @@ func parseSubjectAccessReviewsByHost(review string) (map[string][]string, error)
 	}
 
 	reviews := make(map[string][]string)
-	for k, _ := range json.MustMap() {
+	for k := range json.MustMap() {
 		data, err := json.Get(k).EncodePretty()
 		if err != nil {
 			return nil, err
