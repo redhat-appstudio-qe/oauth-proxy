@@ -159,6 +159,7 @@ func (p *OpenShiftProvider) newOpenShiftClient() (*http.Client, error) {
 			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: oscrypto.SecureTLSConfig(&tls.Config{RootCAs: pool}),
 		},
+		Timeout: 1 * time.Minute,
 	}
 	p.httpClientCache.Store(metadataHash, httpClient)
 
