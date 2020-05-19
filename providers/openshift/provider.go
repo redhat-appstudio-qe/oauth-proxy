@@ -27,6 +27,7 @@ import (
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/authentication/authenticator"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
@@ -317,14 +318,18 @@ func (p *OpenShiftProvider) Complete(data *providers.ProviderData, reviewURL *ur
 		}
 		// check whether we have access to perform authentication review
 		if authenticator.TokenAccessReviewClient != nil {
-			_, err := authenticator.TokenAccessReviewClient.Create(&authenticationv1.TokenReview{
-				Spec: authenticationv1.TokenReviewSpec{
-					Token: "TEST",
-				},
+			wait.PollImmediate(2*time.Second, 10*time.Second, func() (bool, error) {
+				_, err := authenticator.TokenAccessReviewClient.Create(&authenticationv1.TokenReview{
+					Spec: authenticationv1.TokenReviewSpec{
+						Token: "TEST",
+					},
+				})
+				if err != nil {
+					log.Printf("unable to retrieve authentication information for tokens: %v", err)
+					return false, nil
+				}
+				return true, nil
 			})
-			if err != nil {
-				return fmt.Errorf("unable to retrieve authentication information for tokens: %v", err)
-			}
 		}
 
 		authorizer, err := p.AuthorizationOptions.ToAuthorizationConfig()
@@ -333,18 +338,22 @@ func (p *OpenShiftProvider) Complete(data *providers.ProviderData, reviewURL *ur
 		}
 		// check whether we have access to perform authentication review
 		if authorizer.SubjectAccessReviewClient != nil {
-			_, err := authorizer.SubjectAccessReviewClient.Create(&authorizationv1.SubjectAccessReview{
-				Spec: authorizationv1.SubjectAccessReviewSpec{
-					User: "TEST",
-					ResourceAttributes: &authorizationv1.ResourceAttributes{
-						Resource: "TEST",
-						Verb:     "TEST",
+			wait.PollImmediate(2*time.Second, 10*time.Second, func() (bool, error) {
+				_, err := authorizer.SubjectAccessReviewClient.Create(&authorizationv1.SubjectAccessReview{
+					Spec: authorizationv1.SubjectAccessReviewSpec{
+						User: "TEST",
+						ResourceAttributes: &authorizationv1.ResourceAttributes{
+							Resource: "TEST",
+							Verb:     "TEST",
+						},
 					},
-				},
+				})
+				if err != nil {
+					log.Printf("unable to retrieve authorization information for users: %v", err)
+					return false, nil
+				}
+				return true, nil
 			})
-			if err != nil {
-				return fmt.Errorf("unable to retrieve authorization information for users: %v", err)
-			}
 		}
 
 		p.authenticator, _, err = authenticator.New()
