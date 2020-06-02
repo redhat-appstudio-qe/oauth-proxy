@@ -83,11 +83,22 @@ type Options struct {
 	ValidateURL    string `flag:"validate-url" cfg:"validate_url"`
 	Scope          string `flag:"scope" cfg:"scope"`
 	ApprovalPrompt string `flag:"approval-prompt" cfg:"approval_prompt"`
-
 	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
 
 	SignatureKey string   `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 	UpstreamCAs  []string `flag:"upstream-ca" cfg:"upstream_ca"`
+
+	// An optional, absolute URL to redirect web browsers to after logging out of
+	// the console. If not specified, it will redirect to the default login page.
+	// This is required when using an identity provider that supports single
+	// sign-on (SSO) such as:
+	// - OpenID (Keycloak, Azure)
+	// - RequestHeader (GSSAPI, SSPI, SAML)
+	// - OAuth (GitHub, GitLab, Google)
+	// Logging out of the console will destroy the user's token. The logoutRedirect
+	// provides the user the option to perform single logout (SLO) through the identity
+	// provider to destroy their single sign-on session.
+	LogoutRedirectURL       string `flag:"logout-url" cfg:"logout_url"`
 
 	// internal values that are set after config validation
 	redirectURL       *url.URL

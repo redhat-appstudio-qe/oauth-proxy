@@ -61,6 +61,8 @@ type OAuthProxy struct {
 	OAuthCallbackPath string
 	AuthOnlyPath      string
 
+	LogoutRedirectURL string
+
 	redirectURL         *url.URL // the url to receive requests at
 	provider            providers.Provider
 	ProxyPrefix         string
@@ -267,6 +269,8 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		OAuthStartPath:    fmt.Sprintf("%s/start", opts.ProxyPrefix),
 		OAuthCallbackPath: fmt.Sprintf("%s/callback", opts.ProxyPrefix),
 		AuthOnlyPath:      fmt.Sprintf("%s/auth", opts.ProxyPrefix),
+
+		LogoutRedirectURL: opts.LogoutRedirectURL,
 
 		ProxyPrefix:         opts.ProxyPrefix,
 		provider:            opts.provider,
@@ -595,7 +599,11 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
 
 func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
 	p.ClearSessionCookie(rw, req)
-	http.Redirect(rw, req, "/", 302)
+	redirectURL := "/"
+	if len(p.LogoutRedirectURL) > 0 {
+		redirectURL = p.LogoutRedirectURL
+	}
+	http.Redirect(rw, req, redirectURL, 302)
 }
 
 func (p *OAuthProxy) OAuthStart(rw http.ResponseWriter, req *http.Request) {

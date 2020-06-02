@@ -89,6 +89,7 @@ func main() {
 
 	flagSet.String("provider", "openshift", "OAuth provider")
 	flagSet.String("login-url", "", "Authentication endpoint")
+	flagSet.String("logout-url", "", "absolute URL to redirect web browsers to after logging out of openshift oauth server")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
