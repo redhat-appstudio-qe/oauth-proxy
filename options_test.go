@@ -210,3 +210,22 @@ func TestValidateCookieBadName(t *testing.T) {
 	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
 		fmt.Sprintf("  invalid cookie name: %q", o.CookieName))
 }
+
+func TestValidateCookieSameSiteUnknown(t *testing.T) {
+	o := testOptions()
+	o.CookieSameSite = "foo"
+	err := o.Validate(&testProvider{})
+	assert.Equal(t, err.Error(), "Invalid configuration:\n"+
+		fmt.Sprintf("  cookie_samesite (%q) must be one of ['', 'lax', 'strict', 'none']", o.CookieSameSite))
+}
+
+func TestValidateCookieSameSite(t *testing.T) {
+	testCases := []string{"", "lax", "strict", "none"}
+	for _, tc := range testCases {
+		t.Run(tc, func(t *testing.T) {
+			o := testOptions()
+			o.CookieSameSite = tc
+			assert.Equal(t, nil, o.Validate(&testProvider{}))
+		})
+	}
+}

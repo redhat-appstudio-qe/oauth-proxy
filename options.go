@@ -58,6 +58,7 @@ type Options struct {
 	CookieRefresh    time.Duration `flag:"cookie-refresh" cfg:"cookie_refresh" env:"OAUTH2_PROXY_COOKIE_REFRESH"`
 	CookieSecure     bool          `flag:"cookie-secure" cfg:"cookie_secure"`
 	CookieHttpOnly   bool          `flag:"cookie-httponly" cfg:"cookie_httponly"`
+	CookieSameSite   string        `flag:"cookie-samesite" cfg:"cookie_samesite" env:"OAUTH2_PROXY_COOKIE_SAMESITE"`
 
 	Upstreams             []string `flag:"upstream" cfg:"upstreams"`
 	BypassAuthExceptRegex []string `flag:"bypass-auth-except-for" cfg:"bypass_auth_except_for"`
@@ -297,6 +298,12 @@ func (o *Options) Validate(p providers.Provider) error {
 
 	if len(o.TLSClientCAFile) > 0 && len(o.TLSKeyFile) == 0 && len(o.TLSCertFile) == 0 {
 		msgs = append(msgs, "tls-client-ca requires tls-key-file or tls-cert-file to be set to listen on tls")
+	}
+
+	switch o.CookieSameSite {
+	case "", "none", "lax", "strict":
+	default:
+		msgs = append(msgs, fmt.Sprintf("cookie_samesite (%q) must be one of ['', 'lax', 'strict', 'none']", o.CookieSameSite))
 	}
 
 	msgs = parseSignatureKey(o, msgs)

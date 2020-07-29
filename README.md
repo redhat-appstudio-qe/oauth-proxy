@@ -231,6 +231,7 @@ Usage of oauth-proxy:
   -cookie-httponly: set HttpOnly cookie flag (default true)
   -cookie-name string: the name of the cookie that the oauth_proxy creates (default "_oauth2_proxy")
   -cookie-refresh duration: refresh the cookie after this duration; 0 to disable
+  -cookie-samesite string | set SameSite cookie attribute (ie: `"lax"`, `"strict"`, `"none"`, or `""`)
   -cookie-secret string: the seed string for secure cookies (optionally base64 encoded)
   -cookie-secret-file string: same as "-cookie-secret" but read it from a file
   -cookie-secure: set secure (HTTPS) cookie flag (default true)
@@ -285,6 +286,7 @@ The following environment variables can be used in place of the corresponding co
 - `OAUTH2_PROXY_CLIENT_ID`
 - `OAUTH2_PROXY_CLIENT_SECRET`
 - `OAUTH2_PROXY_COOKIE_NAME`
+- `OAUTH2_PROXY_COOKIE_SAMESITE`
 - `OAUTH2_PROXY_COOKIE_SECRET`
 - `OAUTH2_PROXY_COOKIE_DOMAIN`
 - `OAUTH2_PROXY_COOKIE_EXPIRE`
