@@ -51,6 +51,7 @@ type OAuthProxy struct {
 	CookieHttpOnly bool
 	CookieExpire   time.Duration
 	CookieRefresh  time.Duration
+	CookieSameSite string
 	Validator      func(string) bool
 
 	RobotsPath        string
@@ -236,7 +237,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		refresh = fmt.Sprintf("after %s", opts.CookieRefresh)
 	}
 
-	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain, refresh)
+	log.Printf("Cookie settings: name:%s secure(https):%v httponly:%v expiry:%s domain:%s samesite:%s refresh:%s", opts.CookieName, opts.CookieSecure, opts.CookieHttpOnly, opts.CookieExpire, domain, opts.CookieSameSite, refresh)
 
 	var cipher *cookie.Cipher
 	if opts.PassAccessToken || (opts.CookieRefresh != time.Duration(0)) {
@@ -260,6 +261,7 @@ func NewOAuthProxy(opts *Options, validator func(string) bool) *OAuthProxy {
 		CookieHttpOnly: opts.CookieHttpOnly,
 		CookieExpire:   opts.CookieExpire,
 		CookieRefresh:  opts.CookieRefresh,
+		CookieSameSite: opts.CookieSameSite,
 		Validator:      validator,
 
 		RobotsPath:        "/robots.txt",
@@ -379,6 +381,7 @@ func (p *OAuthProxy) makeCookie(req *http.Request, name string, value string, ex
 		HttpOnly: p.CookieHttpOnly,
 		Secure:   p.CookieSecure,
 		Expires:  now.Add(expiration),
+		SameSite: parseSameSite(p.CookieSameSite),
 	}
 }
 
@@ -857,4 +860,20 @@ func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState,
 func (p *OAuthProxy) CheckRequestAuth(req *http.Request) (*providers.SessionState, error) {
 	// handle advanced validation
 	return p.provider.ValidateRequest(req)
+}
+
+// Parse a valid http.SameSite value from a user supplied string for use of making cookies.
+func parseSameSite(v string) http.SameSite {
+	switch v {
+	case "lax":
+		return http.SameSiteLaxMode
+	case "strict":
+		return http.SameSiteStrictMode
+	case "none":
+		return http.SameSiteNoneMode
+	case "":
+		return http.SameSiteDefaultMode
+	default:
+		panic(fmt.Sprintf("Invalid value for SameSite: %s", v))
+	}
 }
