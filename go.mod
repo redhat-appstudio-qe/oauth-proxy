@@ -12,6 +12,7 @@ require (
 	github.com/openshift/build-machinery-go v0.0.0-20200819073603-48aa266c95f7
 	github.com/openshift/library-go v0.0.0-20200918101923-1e4c94603efe
 	github.com/yhat/wsutil v0.0.0-20170731153501-1d66fa95c997
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	k8s.io/api v0.19.2
 	k8s.io/apimachinery v0.19.2
