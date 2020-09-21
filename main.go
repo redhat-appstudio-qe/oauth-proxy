@@ -21,14 +21,14 @@ func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	flagSet := flag.NewFlagSet("oauth2_proxy", flag.ExitOnError)
 
-	emailDomains := StringArray{}
-	upstreams := StringArray{}
-	skipAuthRegex := StringArray{}
-	bypassAuthRegex := StringArray{}
-	bypassAuthExceptRegex := StringArray{}
-	openshiftCAs := StringArray{}
+	emailDomains := NewStringArray()
+	upstreams := NewStringArray()
+	skipAuthRegex := NewStringArray()
+	bypassAuthRegex := NewStringArray()
+	bypassAuthExceptRegex := NewStringArray()
+	openshiftCAs := NewStringArray()
 	clientCA := ""
-	upstreamCAs := StringArray{}
+	upstreamCAs := NewStringArray()
 
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
@@ -41,22 +41,22 @@ func main() {
 	flagSet.StringVar(&clientCA, "tls-client-ca", clientCA, "path to a CA file for admitting client certificates.")
 	flagSet.String("redirect-url", "", "the OAuth Redirect URL. ie: \"https://internalapp.yourcompany.com/oauth/callback\"")
 	flagSet.Bool("set-xauthrequest", false, "set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)")
-	flagSet.Var(&upstreams, "upstream", "the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path")
+	flagSet.Var(upstreams, "upstream", "the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path")
 	flagSet.Bool("pass-basic-auth", true, "pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.Bool("pass-user-headers", true, "pass X-Forwarded-User and X-Forwarded-Email information to upstream")
 	flagSet.String("basic-auth-password", "", "the password to set when passing the HTTP Basic Auth header")
 	flagSet.Bool("pass-access-token", false, "pass OAuth access_token to upstream via X-Forwarded-Access-Token header")
 	flagSet.Bool("pass-user-bearer-token", false, "pass OAuth access token received from the client to upstream via X-Forwarded-Access-Token header")
 	flagSet.Bool("pass-host-header", true, "pass the request Host Header to upstream")
-	flagSet.Var(&bypassAuthExceptRegex, "bypass-auth-except-for", "provide authentication ONLY for request paths under proxy-prefix and those that match the given regex (may be given multiple times). Cannot be set with -skip-auth-regex/-bypass-auth-for")
-	flagSet.Var(&bypassAuthRegex, "bypass-auth-for", "alias for skip-auth-regex")
-	flagSet.Var(&skipAuthRegex, "skip-auth-regex", "bypass authentication for request paths that match (may be given multiple times). Cannot be set with -bypass-auth-except-for. Alias for -bypass-auth-for")
+	flagSet.Var(bypassAuthExceptRegex, "bypass-auth-except-for", "provide authentication ONLY for request paths under proxy-prefix and those that match the given regex (may be given multiple times). Cannot be set with -skip-auth-regex/-bypass-auth-for")
+	flagSet.Var(bypassAuthRegex, "bypass-auth-for", "alias for skip-auth-regex")
+	flagSet.Var(skipAuthRegex, "skip-auth-regex", "bypass authentication for request paths that match (may be given multiple times). Cannot be set with -bypass-auth-except-for. Alias for -bypass-auth-for")
 	flagSet.Bool("skip-provider-button", false, "will skip sign-in-page to directly reach the next step: oauth/start")
 	flagSet.Bool("skip-auth-preflight", false, "will skip authentication for OPTIONS requests")
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS")
 	flagSet.String("debug-address", "", "[http://]<addr>:<port> or unix://<path> to listen on for debug and requests")
 
-	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
+	flagSet.Var(emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("client-secret-file", "", "a file containing the client-secret")
@@ -71,7 +71,7 @@ func main() {
 	flagSet.String("openshift-group", "", "restrict logins to members of this group (or groups, if encoded as a JSON array).")
 	flagSet.String("openshift-sar", "", "require this encoded subject access review to authorize (may be a JSON list).")
 	flagSet.String("openshift-sar-by-host", "", "require this encoded subject access review to authorize (must be a JSON array).")
-	flagSet.Var(&openshiftCAs, "openshift-ca", "paths to CA roots for the OpenShift API (may be given multiple times, defaults to /var/run/secrets/kubernetes.io/serviceaccount/ca.crt).")
+	flagSet.Var(openshiftCAs, "openshift-ca", "paths to CA roots for the OpenShift API (may be given multiple times, defaults to /var/run/secrets/kubernetes.io/serviceaccount/ca.crt).")
 	flagSet.String("openshift-review-url", "", "Permission check endpoint (defaults to the subject access review endpoint)")
 	flagSet.String("openshift-delegate-urls", "", "If set, perform delegated authorization against the OpenShift API server. Value is a JSON map of path prefixes to v1beta1.ResourceAttribute records that must be granted to the user to continue. E.g. {\"/\":{\"resource\":\"pods\",\"namespace\":\"default\",\"name\":\"test\"}} only allows users who can see the pod test in namespace default.")
 	flagSet.String("openshift-service-account", "", "An optional name of an OpenShift service account to act as. If set, the injected service account info will be used to determine the client ID and client secret.")
@@ -98,7 +98,7 @@ func main() {
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
 
 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
-	flagSet.Var(&upstreamCAs, "upstream-ca", "paths to CA roots for the Upstream (target) Server (may be given multiple times, defaults to system trust store).")
+	flagSet.Var(upstreamCAs, "upstream-ca", "paths to CA roots for the Upstream (target) Server (may be given multiple times, defaults to system trust store).")
 
 	providerOpenShift := openshift.New()
 	providerOpenShift.Bind(flagSet)
@@ -106,7 +106,7 @@ func main() {
 	flagSet.Parse(os.Args[1:])
 
 	providerOpenShift.SetClientCAFile(clientCA)
-	providerOpenShift.SetReviewCAs(openshiftCAs)
+	providerOpenShift.SetReviewCAs(openshiftCAs.Get().([]string))
 
 	if *showVersion {
 		fmt.Printf("oauth2_proxy v%s (built with %s)\n", VERSION, runtime.Version())

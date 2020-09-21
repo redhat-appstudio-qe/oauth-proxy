@@ -1,16 +1,31 @@
 package main
 
 import (
+	"flag"
 	"strings"
 )
 
-type StringArray []string
+var _ flag.Getter = StringArray{}
 
-func (a *StringArray) Set(s string) error {
-	*a = append(*a, s)
+type StringArray struct {
+	stringArray *[]string
+}
+
+func NewStringArray() *StringArray {
+	return &StringArray{
+		stringArray: &[]string{},
+	}
+}
+
+func (a StringArray) Get() interface{} {
+	return *a.stringArray
+}
+
+func (a StringArray) Set(s string) error {
+	*a.stringArray = append(*a.stringArray, s)
 	return nil
 }
 
-func (a *StringArray) String() string {
-	return strings.Join(*a, ",")
+func (a StringArray) String() string {
+	return strings.Join(*a.stringArray, ",")
 }
