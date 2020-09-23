@@ -27,6 +27,7 @@ import (
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/authentication/authenticator"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -319,11 +320,13 @@ func (p *OpenShiftProvider) Complete(data *providers.ProviderData, reviewURL *ur
 		// check whether we have access to perform authentication review
 		if authenticator.TokenAccessReviewClient != nil {
 			wait.PollImmediate(2*time.Second, 10*time.Second, func() (bool, error) {
-				_, err := authenticator.TokenAccessReviewClient.Create(&authenticationv1.TokenReview{
-					Spec: authenticationv1.TokenReviewSpec{
-						Token: "TEST",
+				_, err := authenticator.TokenAccessReviewClient.Create(context.TODO(),
+					&authenticationv1.TokenReview{
+						Spec: authenticationv1.TokenReviewSpec{
+							Token: "TEST",
+						},
 					},
-				})
+					metav1.CreateOptions{})
 				if err != nil {
 					log.Printf("unable to retrieve authentication information for tokens: %v", err)
 					return false, nil
@@ -339,15 +342,16 @@ func (p *OpenShiftProvider) Complete(data *providers.ProviderData, reviewURL *ur
 		// check whether we have access to perform authentication review
 		if authorizer.SubjectAccessReviewClient != nil {
 			wait.PollImmediate(2*time.Second, 10*time.Second, func() (bool, error) {
-				_, err := authorizer.SubjectAccessReviewClient.Create(&authorizationv1.SubjectAccessReview{
-					Spec: authorizationv1.SubjectAccessReviewSpec{
-						User: "TEST",
-						ResourceAttributes: &authorizationv1.ResourceAttributes{
-							Resource: "TEST",
-							Verb:     "TEST",
+				_, err := authorizer.SubjectAccessReviewClient.Create(context.TODO(),
+					&authorizationv1.SubjectAccessReview{
+						Spec: authorizationv1.SubjectAccessReviewSpec{
+							User: "TEST",
+							ResourceAttributes: &authorizationv1.ResourceAttributes{
+								Resource: "TEST",
+								Verb:     "TEST",
+							},
 						},
-					},
-				})
+					}, metav1.CreateOptions{})
 				if err != nil {
 					log.Printf("unable to retrieve authorization information for users: %v", err)
 					return false, nil

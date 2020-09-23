@@ -3,6 +3,7 @@ package e2e
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -22,12 +23,12 @@ import (
 
 	"golang.org/x/net/html"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -101,7 +102,7 @@ func waitForHealthzCheck(cas [][]byte, url string) error {
 
 func podDeleted(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		_, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		_, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return true, nil
@@ -114,7 +115,7 @@ func podDeleted(c kubernetes.Interface, podName, namespace string) wait.Conditio
 
 func podRunning(c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}

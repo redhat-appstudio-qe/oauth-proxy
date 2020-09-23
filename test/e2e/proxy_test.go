@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -21,6 +22,8 @@ import (
 )
 
 func TestOAuthProxyE2E(t *testing.T) {
+	testCtx := context.Background()
+
 	ns := os.Getenv("TEST_NAMESPACE")
 	oauthProxyTests := map[string]struct {
 		oauthProxyArgs []string
@@ -305,7 +308,7 @@ func TestOAuthProxyE2E(t *testing.T) {
 			continue
 		}
 		t.Run(fmt.Sprintf("setting up e2e tests %s", tcName), func(t *testing.T) {
-			_, err := kubeClientSet.CoreV1().ServiceAccounts(ns).Create(newOAuthProxySA())
+			_, err := kubeClientSet.CoreV1().ServiceAccounts(ns).Create(testCtx, newOAuthProxySA(), metav1.CreateOptions{})
 			if err != nil {
 				t.Fatalf("setup: error creating SA: %s", err)
 			}
@@ -333,18 +336,18 @@ func TestOAuthProxyE2E(t *testing.T) {
 				t.Fatalf("setup: error creating upstream TLS certs: %s", err)
 			}
 
-			_, err = kubeClientSet.CoreV1().Services(ns).Create(newOAuthProxyService())
+			_, err = kubeClientSet.CoreV1().Services(ns).Create(testCtx, newOAuthProxyService(), metav1.CreateOptions{})
 			if err != nil {
 				t.Fatalf("setup: error creating service: %s", err)
 			}
 
 			// configMap provides oauth-proxy with the certificates we created above
-			_, err = kubeClientSet.CoreV1().ConfigMaps(ns).Create(newOAuthProxyConfigMap(ns, caPem, serviceCert, serviceKey, upstreamCA, upstreamCert, upstreamKey))
+			_, err = kubeClientSet.CoreV1().ConfigMaps(ns).Create(testCtx, newOAuthProxyConfigMap(ns, caPem, serviceCert, serviceKey, upstreamCA, upstreamCert, upstreamKey), metav1.CreateOptions{})
 			if err != nil {
 				t.Fatalf("setup: error creating certificate configMap: %s", err)
 			}
 
-			oauthProxyPod, err := kubeClientSet.CoreV1().Pods(ns).Create(newOAuthProxyPod(image, backendImage, tc.oauthProxyArgs, tc.backendEnvs))
+			oauthProxyPod, err := kubeClientSet.CoreV1().Pods(ns).Create(testCtx, newOAuthProxyPod(image, backendImage, tc.oauthProxyArgs, tc.backendEnvs), metav1.CreateOptions{})
 			if err != nil {
 				t.Fatalf("setup: error creating oauth-proxy pod with image '%s' and args '%v': %s", image, tc.oauthProxyArgs, err)
 			}
@@ -355,7 +358,7 @@ func TestOAuthProxyE2E(t *testing.T) {
 			}
 
 			// Find the service CA for the client trust store
-			secrets, err := kubeClientSet.CoreV1().Secrets(ns).List(metav1.ListOptions{})
+			secrets, err := kubeClientSet.CoreV1().Secrets(ns).List(testCtx, metav1.ListOptions{})
 			if err != nil {
 				t.Fatalf("setup: error listing secrets: %s", err)
 			}
@@ -393,11 +396,11 @@ func TestOAuthProxyE2E(t *testing.T) {
 					t.Fatalf("skipping cleanup step for test '%s' and stopping on command", tcName)
 				}
 				t.Logf("cleaning up test %s", tcName)
-				kubeClientSet.CoreV1().Pods(ns).Delete("proxy", nil)
-				kubeClientSet.CoreV1().Services(ns).Delete("proxy", nil)
+				kubeClientSet.CoreV1().Pods(ns).Delete(testCtx, "proxy", metav1.DeleteOptions{})
+				kubeClientSet.CoreV1().Services(ns).Delete(testCtx, "proxy", metav1.DeleteOptions{})
 				deleteTestRoute("proxy-route", ns)
-				kubeClientSet.CoreV1().ConfigMaps(ns).Delete("proxy-certs", nil)
-				kubeClientSet.CoreV1().ServiceAccounts(ns).Delete("proxy", nil)
+				kubeClientSet.CoreV1().ConfigMaps(ns).Delete(testCtx, "proxy-certs", metav1.DeleteOptions{})
+				kubeClientSet.CoreV1().ServiceAccounts(ns).Delete(testCtx, "proxy", metav1.DeleteOptions{})
 				waitForPodDeletion(kubeClientSet, oauthProxyPod.Name, ns)
 				execCmd("oc", []string{"adm", "policy", "remove-role-from-user", "admin", user, "-n", ns}, "")
 			}()

@@ -2,11 +2,12 @@ package main
 
 import (
 	"testing"
+
 	"github.com/bmizerany/assert"
 )
 
 func TestStringArray(t *testing.T) {
-	sa := StringArray{}
+	sa := NewStringArray()
 	assert.Equal(t, "", sa.String())
 	err := sa.Set("foo")
 	if err != nil {
