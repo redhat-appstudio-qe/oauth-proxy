@@ -84,7 +84,7 @@ type Options struct {
 	ValidateURL    string `flag:"validate-url" cfg:"validate_url"`
 	Scope          string `flag:"scope" cfg:"scope"`
 	ApprovalPrompt string `flag:"approval-prompt" cfg:"approval_prompt"`
-	RequestLogging bool `flag:"request-logging" cfg:"request_logging"`
+	RequestLogging bool   `flag:"request-logging" cfg:"request_logging"`
 
 	SignatureKey string   `flag:"signature-key" cfg:"signature_key" env:"OAUTH2_PROXY_SIGNATURE_KEY"`
 	UpstreamCAs  []string `flag:"upstream-ca" cfg:"upstream_ca"`
@@ -99,7 +99,7 @@ type Options struct {
 	// Logging out of the console will destroy the user's token. The logoutRedirect
 	// provides the user the option to perform single logout (SLO) through the identity
 	// provider to destroy their single sign-on session.
-	LogoutRedirectURL       string `flag:"logout-url" cfg:"logout_url"`
+	LogoutRedirectURL string `flag:"logout-url" cfg:"logout_url"`
 
 	// internal values that are set after config validation
 	redirectURL       *url.URL
