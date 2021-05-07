@@ -399,12 +399,11 @@ func (p *OpenShiftProvider) ValidateRequest(req *http.Request) (*providers.Sessi
 
 	// authorize
 	record.record.User = response.User
-	decision, reason, err := p.authorizer.Authorize(context.Background(), record.record)
+	decision, _, err := p.authorizer.Authorize(context.Background(), record.record)
 	if err != nil {
 		return nil, err
 	}
 	if decision != authorizer.DecisionAllow {
-		log.Printf("authorizer reason: %s", reason)
 		return nil, nil
 	}
 
