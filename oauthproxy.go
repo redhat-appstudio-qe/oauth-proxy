@@ -473,7 +473,6 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		SignInMessage string
 		CustomLogin   bool
 		Redirect      string
-		Version       string
 		ProxyPrefix   string
 		Footer        template.HTML
 	}{
@@ -481,7 +480,6 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 		SignInMessage: p.SignInMessage,
 		CustomLogin:   p.displayCustomLoginForm(),
 		Redirect:      redirect_url,
-		Version:       VERSION,
 		ProxyPrefix:   p.ProxyPrefix,
 		Footer:        template.HTML(p.Footer),
 	}

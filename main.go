@@ -109,7 +109,7 @@ func main() {
 	providerOpenShift.SetReviewCAs(openshiftCAs.Get().([]string))
 
 	if *showVersion {
-		fmt.Printf("oauth2_proxy v%s (built with %s)\n", VERSION, runtime.Version())
+		fmt.Printf("oauth2_proxy was built with %s\n", runtime.Version())
 		return
 	}
 
