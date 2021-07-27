@@ -8,9 +8,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/authenticator"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 type mockAuthRequestHandler struct {
@@ -147,7 +153,19 @@ func TestNewOpenShiftClient(t *testing.T) {
 		t.Fatalf("failed to write CA cert to tmpfile: %v", err)
 	}
 
-	p := &OpenShiftProvider{}
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	err = indexer.Add(&corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "oauth-serving-cert",
+			Namespace: "openshift-config-managed",
+		},
+	})
+	require.NoError(t, err)
+
+	p := &OpenShiftProvider{
+		configMapLister: corev1listers.NewConfigMapLister(indexer),
+	}
+
 	p.paths = recordsByPath{pathRecord{"/someurl", authorizer.AttributesRecord{}}}
 	p.authenticator = &mockAuthRequestHandler{}
 	p.authorizer = &mockAuthorizer{}
