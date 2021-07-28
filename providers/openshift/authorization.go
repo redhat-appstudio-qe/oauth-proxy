@@ -8,8 +8,6 @@ import (
 
 	"k8s.io/apiserver/pkg/authorization/authorizerfactory"
 	authorizationclient "k8s.io/client-go/kubernetes/typed/authorization/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 // DelegatingAuthorizationOptions provides an easy way for composing API servers to delegate their authorization to
@@ -69,26 +67,10 @@ func (s *DelegatingAuthorizationOptions) ToAuthorizationConfig() (authorizerfact
 }
 
 func (s *DelegatingAuthorizationOptions) newSubjectAccessReview() (authorizationclient.SubjectAccessReviewInterface, error) {
-	var clientConfig *rest.Config
-	var err error
-	if len(s.RemoteKubeConfigFile) > 0 {
-		loadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: s.RemoteKubeConfigFile}
-		loader := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
-
-		clientConfig, err = loader.ClientConfig()
-
-	} else {
-		// without the remote kubeconfig file, try to use the in-cluster config.  Most addon API servers will
-		// use this path
-		clientConfig, err = rest.InClusterConfig()
-	}
+	clientConfig, err := GetClientConfig(s.RemoteKubeConfigFile)
 	if err != nil {
 		return nil, err
 	}
-
-	// set high qps/burst limits since this will effectively limit API server responsiveness
-	clientConfig.QPS = 200
-	clientConfig.Burst = 400
 
 	client, err := authorizationclient.NewForConfig(clientConfig)
 	if err != nil {

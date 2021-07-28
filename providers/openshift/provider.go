@@ -28,9 +28,14 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/authentication/authenticator"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	"k8s.io/client-go/informers"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func emptyURL(u *url.URL) bool {
@@ -45,13 +50,15 @@ type OpenShiftProvider struct {
 
 	AuthenticationOptions DelegatingAuthenticationOptions
 	AuthorizationOptions  DelegatingAuthorizationOptions
+	KubeClientOptions     KubeClientOptions
 
-	authenticator authenticator.Request
-	authorizer    authorizer.Authorizer
-	defaultRecord authorizer.AttributesRecord
-	reviews       []string
-	paths         recordsByPath
-	hostreviews   map[string][]string
+	authenticator   authenticator.Request
+	authorizer      authorizer.Authorizer
+	configMapLister corev1listers.ConfigMapLister
+	defaultRecord   authorizer.AttributesRecord
+	reviews         []string
+	paths           recordsByPath
+	hostreviews     map[string][]string
 
 	// httpClientCache stores httpClient objects so that new client does not have to
 	// be created on each request just to prevent CAs content changed
@@ -83,6 +90,7 @@ func (p *OpenShiftProvider) SetClientCAFile(file string) {
 }
 
 func (p *OpenShiftProvider) Bind(flags *flag.FlagSet) {
+	p.KubeClientOptions.AddFlags(flags)
 	p.AuthenticationOptions.AddFlags(flags)
 	p.AuthorizationOptions.AddFlags(flags)
 }
@@ -145,7 +153,17 @@ func (p *OpenShiftProvider) newOpenShiftClient() (*http.Client, error) {
 
 	// try to retrieve a cached client
 	metadataHash, err := util.GetFilesMetadataHash(capaths)
-	if httpClient, ok := p.httpClientCache.Load(metadataHash); ok {
+	if err != nil {
+		return nil, err
+	}
+
+	oauthServerCert, err := p.configMapLister.ConfigMaps("openshift-config-managed").Get("oauth-serving-cert")
+	if err != nil {
+		return nil, err
+	}
+
+	cachedKey := metadataHash + oauthServerCert.ResourceVersion
+	if httpClient, ok := p.httpClientCache.Load(cachedKey); ok {
 		return httpClient.(*http.Client), nil
 	}
 
@@ -153,6 +171,10 @@ func (p *OpenShiftProvider) newOpenShiftClient() (*http.Client, error) {
 	pool, err := util.GetCertPool(capaths, system_roots)
 	if err != nil {
 		return nil, err
+	}
+
+	if ok := pool.AppendCertsFromPEM([]byte(oauthServerCert.Data["ca-bundle.crt"])); !ok {
+		log.Println("failed to add the oauth-server certificate to the OpenShift client CA bundle")
 	}
 
 	httpClient := &http.Client{
@@ -163,7 +185,7 @@ func (p *OpenShiftProvider) newOpenShiftClient() (*http.Client, error) {
 		},
 		Timeout: 1 * time.Minute,
 	}
-	p.httpClientCache.Store(metadataHash, httpClient)
+	p.httpClientCache.Store(cachedKey, httpClient)
 
 	return httpClient, nil
 }
@@ -309,6 +331,21 @@ func (p *OpenShiftProvider) Complete(data *providers.ProviderData, reviewURL *ur
 
 	p.ProviderData = data
 	p.ReviewURL = reviewURL
+
+	kubeClient, err := p.KubeClientOptions.ToKubeClientConfig()
+	if err != nil {
+		return err
+	}
+
+	kubeInformersMachineConfigNS := informers.NewSharedInformerFactoryWithOptions(
+		kubeClient,
+		10*time.Minute,
+		informers.WithNamespace("openshift-config-managed"),
+		informers.WithTweakListOptions(func(opts *metav1.ListOptions) {
+			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", "oauth-serving-cert").String()
+		}))
+	go kubeInformersMachineConfigNS.Core().V1().ConfigMaps().Informer().Run(context.TODO().Done())
+	p.configMapLister = kubeInformersMachineConfigNS.Core().V1().ConfigMaps().Lister()
 
 	if len(p.paths) > 0 {
 		log.Printf("Delegation of authentication and authorization to OpenShift is enabled for bearer tokens and client certificates.")
@@ -654,4 +691,29 @@ func getKubeAPIURLWithPath(path string) *url.URL {
 	}
 
 	return ret
+}
+
+func GetClientConfig(remoteKubeConfigFile string) (*rest.Config, error) {
+	var clientConfig *rest.Config
+	var err error
+	if len(remoteKubeConfigFile) > 0 {
+		loadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: remoteKubeConfigFile}
+		loader := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
+
+		clientConfig, err = loader.ClientConfig()
+
+	} else {
+		// without the remote kubeconfig file, try to use the in-cluster config.  Most addon API servers will
+		// use this path
+		clientConfig, err = rest.InClusterConfig()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// set high qps/burst limits since this will effectively limit API server responsiveness
+	clientConfig.QPS = 200
+	clientConfig.Burst = 400
+
+	return clientConfig, nil
 }

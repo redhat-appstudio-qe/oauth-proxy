@@ -13,8 +13,6 @@ import (
 	"k8s.io/apiserver/pkg/authentication/request/headerrequest"
 	"k8s.io/apiserver/pkg/server/dynamiccertificates"
 	authenticationclient "k8s.io/client-go/kubernetes/typed/authentication/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type RequestHeaderAuthenticationOptions struct {
@@ -190,33 +188,8 @@ func deserializeStrings(in string) ([]string, error) {
 	return ret, nil
 }
 
-func (s *DelegatingAuthenticationOptions) getClientConfig() (*rest.Config, error) {
-	var clientConfig *rest.Config
-	var err error
-	if len(s.RemoteKubeConfigFile) > 0 {
-		loadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: s.RemoteKubeConfigFile}
-		loader := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
-
-		clientConfig, err = loader.ClientConfig()
-
-	} else {
-		// without the remote kubeconfig file, try to use the in-cluster config.  Most addon API servers will
-		// use this path
-		clientConfig, err = rest.InClusterConfig()
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	// set high qps/burst limits since this will effectively limit API server responsiveness
-	clientConfig.QPS = 200
-	clientConfig.Burst = 400
-
-	return clientConfig, nil
-}
-
 func (s *DelegatingAuthenticationOptions) newTokenAccessReview() (authenticationclient.TokenReviewInterface, error) {
-	clientConfig, err := s.getClientConfig()
+	clientConfig, err := GetClientConfig(s.RemoteKubeConfigFile)
 	if err != nil {
 		return nil, err
 	}
