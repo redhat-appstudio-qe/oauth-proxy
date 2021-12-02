@@ -1,3 +1,4 @@
+//go:build go1.3 && !plan9 && !solaris && !windows
 // +build go1.3,!plan9,!solaris,!windows
 
 // Turns out you can't copy over an existing file on Windows.
