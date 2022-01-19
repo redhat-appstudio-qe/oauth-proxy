@@ -27,6 +27,7 @@ import (
 
 	authenticationv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -157,12 +158,16 @@ func (p *OpenShiftProvider) newOpenShiftClient() (*http.Client, error) {
 		return nil, err
 	}
 
+	cachedKey := metadataHash
+
 	oauthServerCert, err := p.configMapLister.ConfigMaps("openshift-config-managed").Get("oauth-serving-cert")
-	if err != nil {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, err
 	}
+	if oauthServerCert != nil {
+		cachedKey += oauthServerCert.ResourceVersion
+	}
 
-	cachedKey := metadataHash + oauthServerCert.ResourceVersion
 	if httpClient, ok := p.httpClientCache.Load(cachedKey); ok {
 		return httpClient.(*http.Client), nil
 	}
@@ -173,8 +178,10 @@ func (p *OpenShiftProvider) newOpenShiftClient() (*http.Client, error) {
 		return nil, err
 	}
 
-	if ok := pool.AppendCertsFromPEM([]byte(oauthServerCert.Data["ca-bundle.crt"])); !ok {
-		log.Println("failed to add the oauth-server certificate to the OpenShift client CA bundle")
+	if oauthServerCert != nil {
+		if ok := pool.AppendCertsFromPEM([]byte(oauthServerCert.Data["ca-bundle.crt"])); !ok {
+			log.Println("failed to add the oauth-server certificate to the OpenShift client CA bundle")
+		}
 	}
 
 	httpClient := &http.Client{

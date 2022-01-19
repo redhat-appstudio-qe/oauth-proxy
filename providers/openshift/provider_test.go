@@ -154,14 +154,6 @@ func TestNewOpenShiftClient(t *testing.T) {
 	}
 
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-	err = indexer.Add(&corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "oauth-serving-cert",
-			Namespace: "openshift-config-managed",
-		},
-	})
-	require.NoError(t, err)
-
 	p := &OpenShiftProvider{
 		configMapLister: corev1listers.NewConfigMapLister(indexer),
 	}
@@ -171,14 +163,35 @@ func TestNewOpenShiftClient(t *testing.T) {
 	p.authorizer = &mockAuthorizer{}
 	p.SetReviewCAs([]string{tmpfile.Name()})
 
+	// missing oauth serving cert should not cause failures
+	noServerCertClient, err := p.newOpenShiftClient()
+	if err != nil {
+		t.Fatalf("failed to create an OpenShift Client: %v", err)
+	}
+
+	err = indexer.Add(&corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			ResourceVersion: "someVersion",
+			Name:            "oauth-serving-cert",
+			Namespace:       "openshift-config-managed",
+		},
+	})
+	require.NoError(t, err)
+	p.configMapLister = corev1listers.NewConfigMapLister(indexer)
+
 	client, err := p.newOpenShiftClient()
 	if err != nil {
-		t.Fatalf("failed to create an OpenShift Client")
+		t.Fatalf("failed to create an OpenShift Client: %v", err)
+	}
+
+	if noServerCertClient == client {
+		p.httpClientCache.Range(func(key, _ interface{}) bool { t.Logf("%s", key); return true })
+		t.Fatalf("clients should be different when the oauth-server cert is present compared to when it isn't")
 	}
 
 	newClient, err := p.newOpenShiftClient()
 	if err != nil {
-		t.Fatalf("failed to create a new OpenShift Client")
+		t.Fatalf("failed to create a new OpenShift Client: %v", err)
 	}
 
 	// caching should make sure the clients are the same
