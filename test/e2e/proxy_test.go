@@ -83,6 +83,20 @@ func TestOAuthProxyE2E(t *testing.T) {
 			},
 			expectedErr: "did not reach upstream site",
 		},
+		"sar-name-ok": {
+			oauthProxyArgs: []string{
+				"--upstream=http://localhost:8080",
+				`--openshift-sar={"namespace":"` + ns + `","resource":"routes","resourceName":"proxy-route","verb":"get"}`,
+			},
+			pageResult: "URI: /",
+		},
+		"sar-name-fail": {
+			oauthProxyArgs: []string{
+				"--upstream=http://localhost:8080",
+				`--openshift-sar={"namespace":"other","resource":"routes","resourceName":"proxy-route","verb":"get"}`,
+			},
+			expectedErr: "did not reach upstream site",
+		},
 		"sar-multi-ok": {
 			oauthProxyArgs: []string{
 				"--upstream=http://localhost:8080",
