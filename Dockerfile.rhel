@@ -1,0 +1,9 @@
+FROM registry.access.redhat.com/ubi8/go-toolset:1.17.12-3
+WORKDIR  /go/src/github.com/openshift/oauth-proxy
+COPY . .
+RUN go build .
+COPY /oauth-proxy /usr/bin/oauth-proxy
+COPY 
+
+
+ENTRYPOINT ["/usr/bin/oauth-proxy"]
