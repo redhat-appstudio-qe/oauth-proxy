@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" charset="utf-8">
+<head>
+  <title>{{.Title}}</title>
+  <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <link rel="stylesheet" href="fonts.css" />
+              <!-- Include latest PatternFly CSS via CDN -->
+              <link 
+                rel="stylesheet" 
+                href="https://unpkg.com/@patternfly/patternfly/patternfly.css" 
+                crossorigin="anonymous"
+              >
+</head>
+<body>
+
+    <div class="pf-c-empty-state">
+        <div class="pf-c-empty-state__content">
+          <i class="fas fa-exclamation-circle pf-c-empty-state__icon" aria-hidden="true"></i>
+      
+          <h1 class="pf-c-title pf-m-lg">{{.Title}}</h1>
+          <div
+            class="pf-c-empty-state__body"
+          >{{.Message}}</div>
+          <div class="pf-c-empty-state__primary">
+            <a class="pf-c-button pf-m-primary"
+            href="{{.ProxyPrefix}}/sign_in"
+            >Log In</a>
+          </div>
+        </div>
+      </div>
+</body>
+</html>
+{{end}}
